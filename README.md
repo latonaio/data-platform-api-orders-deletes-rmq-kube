@@ -1,6 +1,6 @@
 # data-platform-api-orders-deletes-rmq-kube
 
-data-platform-api-orders-deletes-rmq-kube は、周辺業務システム　を データ連携基盤 と統合することを目的に、API でオーダーデータをキャンセルするマイクロサービスです。  
+data-platform-api-orders-deletes-rmq-kube は、周辺業務システム　を データ連携基盤 と統合することを目的に、API でオーダーデータに削除フラグを設定するマイクロサービスです。  
 https://xxx.xxx.io/api/API_ORDERS_SRV/deletes/
 
 ## 動作環境
@@ -35,10 +35,8 @@ accepter において 下記の例のように、データの種別（＝APIの�
 ここでは、"Header" が指定されています。    
   
 ```
-	"api_schema": "DPFMOrdersCreates",
+	"api_schema": "DPFMOrdersDeletes",
 	"accepter": ["Header"],
-	"order_id": null,
-	"deleted": false
 ```
   
 * 全データを取得する際のsample.jsonの記載例(2)  
@@ -46,10 +44,8 @@ accepter において 下記の例のように、データの種別（＝APIの�
 全データを取得する場合、sample.json は以下のように記載します。  
 
 ```
-	"api_schema": "DPFMOrdersCreates",
+	"api_schema": "DPFMOrdersDeletes",
 	"accepter": ["All"],
-	"order_id": null,
-	"deleted": false
 ```
 
 ## 指定されたデータ種別のコール
@@ -58,7 +54,7 @@ accepter における データ種別 の指定に基づいて DPFM_API_Caller �
 caller.go の func() 毎 の 以下の箇所が、指定された API をコールするソースコードです。  
 
 ```
-func (c *DPFMAPICaller) AsyncOrderDeletes(
+func (c *DPFMAPICaller) AsyncDeletes(
 	accepter []string,
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
@@ -106,7 +102,7 @@ func (c *DPFMAPICaller) AsyncOrderDeletes(
 
 ## Output  
 本マイクロサービスでは、[golang-logging-library-for-data-platform](https://github.com/latonaio/golang-logging-library-for-data-platform) により、以下のようなデータがJSON形式で出力されます。  
-以下の sample.json の例は オーダー の ヘッダデータ がキャンセルされた結果の JSON の例です。  
+以下の sample.json の例は オーダー の ヘッダデータ に削除フラグが設定された結果の JSON の例です。  
 以下の項目のうち、"OrderID" ～ "PlusMinusFlag" は、/DPFM_API_Output_Formatter/type.go 内 の Type Header {} による出力結果です。"cursor" ～ "time"は、golang-logging-library による 定型フォーマットの出力結果です。  
 
 ```
