@@ -27,7 +27,7 @@ data-platform-api-orders-deletes-rmq-kube において、API への値入力条�
 ## データ連携基盤のAPIの選択的コール
 
 Latona および AION の データ連携基盤 関連リソースでは、Inputs フォルダ下の sample.json の accepter に取得したいデータの種別（＝APIの種別）を入力し、指定することができます。  
-なお、同 accepter にAll(もしくは空白)の値を入力することで、全データ（＝全APIの種別）をまとめて取得することができます。  
+なお、同 accepter にAll(もしくは空白)の値を入力することで、全データ（＝全APIの種別）をまとめて処理することができます。  
 
 * sample.jsonの記載例(1)  
 

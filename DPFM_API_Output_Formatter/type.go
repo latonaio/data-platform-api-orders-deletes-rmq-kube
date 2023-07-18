@@ -25,25 +25,23 @@ type SDC struct {
 }
 
 type Message struct {
-	Header       *Header         `json:"Header"`
-	Item         *[]Item         `json:"Item"`
-	ScheduleLine *[]ScheduleLine `json:"ScheduleLine"`
+	Header       	 *[]Header       	 `json:"Header"`
+	Item         	 *[]Item         	 `json:"Item"`
+	ItemScheduleLine *[]ItemScheduleLine `json:"ItemScheduleLine"`
 }
 
 type Header struct {
 	OrderID              int     `json:"OrderID"`
-	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
-	HeaderIsDeleted      *bool   `json:"IsMarkedForDeletion"`
+	IsMarkedForDeletion *bool 	 `json:"IsMarkedForDeletion"`
 }
 
 type Item struct {
-	OrderID            int     `json:"OrderID"`
-	OrderItem          int     `json:"OrderItem"`
-	ItemDeliveryStatus *string `json:"ItemDeliveryStatus"`
-	ItemIsDeleted      *bool   `json:"IsMarkedForDeletion"`
+	OrderID             int     `json:"OrderID"`
+	OrderItem           int     `json:"OrderItem"`
+	IsMarkedForDeletion *bool 	`json:"IsMarkedForDeletion"`
 }
 
-type ScheduleLine struct {
+type ItemScheduleLine struct {
 	OrderID             int   `json:"OrderID"`
 	OrderItem           int   `json:"OrderItem"`
 	ScheduleLine        int   `json:"ScheduleLine"`

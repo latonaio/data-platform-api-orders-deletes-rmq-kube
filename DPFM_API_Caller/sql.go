@@ -12,13 +12,12 @@ import (
 func (c *DPFMAPICaller) HeaderRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
-) *dpfm_api_output_formatter.Header {
-	where := fmt.Sprintf("WHERE header.OrderID = %d ", input.Orders.OrderID)
-	if input.Orders.HeaderDeliveryStatus != nil {
-		where = fmt.Sprintf("%s \n AND HeaderDeliveryStatus = '%s' ", where, *input.Orders.HeaderDeliveryStatus)
+) *[]dpfm_api_output_formatter.Header {
+	where := fmt.Sprintf("WHERE header.OrderID = %d ", input.Header.OrderID)
+	if input.Header.IsMarkedForDeletion != nil {
+		where = fmt.Sprintf("%s \n AND IsMarkedForDeletion = %t", where, *input.Header.IsMarkedForDeletion)
 	}
 	where = fmt.Sprintf("%s \n AND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
-	// where = fmt.Sprintf("%s \n AND ( header.HeaderDeliveryStatus, header.IsDdeleted, header.IsMarkedForDeletion ) = ( 'NP', false, false ) ", where)
 	rows, err := c.db.Query(
 		`SELECT 
 			header.OrderID
@@ -42,7 +41,7 @@ func (c *DPFMAPICaller) ItemsRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
 ) *[]dpfm_api_output_formatter.Item {
-	where := fmt.Sprintf("WHERE item.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+	where := fmt.Sprintf("WHERE item.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Header.OrderID)
 	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
 	// where = fmt.Sprintf("%s\nAND ( item.ItemDeliveryStatus, item.IsDdeleted, item.IsMarkedForDeletion) = ('NP', false, false) ", where)
 	rows, err := c.db.Query(
@@ -66,17 +65,17 @@ func (c *DPFMAPICaller) ItemsRead(
 	return data
 }
 
-func (c *DPFMAPICaller) ScheduleLineRead(
+func (c *DPFMAPICaller) ItemScheduleLineRead(
 	input *dpfm_api_input_reader.SDC,
 	log *logger.Logger,
-) *[]dpfm_api_output_formatter.ScheduleLine {
-	where := fmt.Sprintf("WHERE schedule.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Orders.OrderID)
+) *[]dpfm_api_output_formatter.ItemScheduleLine {
+	where := fmt.Sprintf("WHERE itemScheduleLine.OrderID IS NOT NULL\nAND header.OrderID = %d", input.Header.OrderID)
 	where = fmt.Sprintf("%s\nAND ( header.Buyer = %d OR header.Seller = %d ) ", where, input.BusinessPartner, input.BusinessPartner)
 	// where = fmt.Sprintf("%s\nAND (schedule.IsDdeleted, schedule.IsMarkedForDeletion) = (false, false) ", where)
 	rows, err := c.db.Query(
 		`SELECT 
-			schedule.OrderID, schedule.OrderItem, schedule.ScheduleLine
-		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_schedule_line_data as schedule
+			itemScheduleLine.OrderID, itemScheduleLine.OrderItem, itemScheduleLine.ScheduleLine
+		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_item_schedule_line_data as itemScheduleLine
 		INNER JOIN DataPlatformMastersAndTransactionsMysqlKube.data_platform_orders_header_data as header
 		ON header.OrderID = schedule.OrderID ` + where + ` ;`)
 	if err != nil {
@@ -85,7 +84,7 @@ func (c *DPFMAPICaller) ScheduleLineRead(
 	}
 	defer rows.Close()
 
-	data, err := dpfm_api_output_formatter.ConvertToSchedule(rows)
+	data, err := dpfm_api_output_formatter.ConvertToItemScheduleLine(rows)
 	if err != nil {
 		log.Error("%+v", err)
 		return nil

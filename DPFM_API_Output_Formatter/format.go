@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func ConvertToHeader(rows *sql.Rows) (*Header, error) {
+func ConvertToHeader(rows *sql.Rows) (*[]Header, error) {
 	defer rows.Close()
 	header := Header{}
 	i := 0
@@ -55,30 +55,30 @@ func ConvertToItem(rows *sql.Rows) (*[]Item, error) {
 	return &items, nil
 }
 
-func ConvertToSchedule(rows *sql.Rows) (*[]ScheduleLine, error) {
+func ConvertToItemScheduleLine(rows *sql.Rows) (*[]ItemScheduleLine, error) {
 	defer rows.Close()
-	schedules := make([]ScheduleLine, 0)
+	itemSchedulelines := make([]ItemScheduleLine, 0)
 	i := 0
 
 	for rows.Next() {
 		i++
-		schedule := ScheduleLine{}
+		itemScheduleLine := ItemScheduleLine{}
 		err := rows.Scan(
-			&schedule.OrderID,
-			&schedule.OrderItem,
-			&schedule.ScheduleLine,
+			&itemScheduleLine.OrderID,
+			&itemScheduleLine.OrderItem,
+			&itemScheduleLine.ScheduleLine,
 		)
 		if err != nil {
 			fmt.Printf("err = %+v \n", err)
-			return &schedules, err
+			return &itemSchedulelines, err
 		}
 
-		schedules = append(schedules, schedule)
+		itemSchedulelines = append(itemSchedulelines, itemScheduleLine)
 	}
 	if i == 0 {
 		fmt.Printf("DBに対象のレコードが存在しません。")
-		return &schedules, nil
+		return &scitemSchedulelineshedules, nil
 	}
 
-	return &schedules, nil
+	return &itemSchedulelines, nil
 }
