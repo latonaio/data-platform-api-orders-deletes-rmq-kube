@@ -54,7 +54,7 @@ func (c *DPFMAPICaller) deleteSqlProcess(
 ) *dpfm_api_output_formatter.Message {
 	var headerData *dpfm_api_output_formatter.Header
 	itemData := make([]dpfm_api_output_formatter.Item, 0)
-	scheduleData := make([]dpfm_api_output_formatter.ScheduleLine, 0)
+	itemScheduleLineData := make([]dpfm_api_output_formatter.ItemScheduleLine, 0)
 	for _, a := range accepter {
 		switch a {
 		case "Header":
@@ -64,27 +64,27 @@ func (c *DPFMAPICaller) deleteSqlProcess(
 				continue
 			}
 			itemData = append(itemData, *i...)
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 		case "Item":
 			i, s := c.itemDelete(input, output, log)
 			if i == nil || s == nil {
 				continue
 			}
 			itemData = append(itemData, *i...)
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 		case "Schedule":
-			s := c.scheduleDelete(input, output, log)
+			s := c.itemScheduleLineDelete(input, output, log)
 			if s == nil {
 				continue
 			}
-			scheduleData = append(scheduleData, *s...)
+			itemScheduleLineData = append(itemScheduleLineData, *s...)
 		}
 	}
 
 	return &dpfm_api_output_formatter.Message{
-		Header:       headerData,
-		Item:         &itemData,
-		ScheduleLine: &scheduleData,
+		Header:       		headerData,
+		Item:         		&itemData,
+		ItemScheduleLine:	&itemScheduleLineData,
 	}
 }
 
@@ -92,14 +92,14 @@ func (c *DPFMAPICaller) headerDelete(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) (*dpfm_api_output_formatter.Header, *[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ScheduleLine) {
+) (*[]dpfm_api_output_formatter.Header, *[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ItemScheduleLine) {
 	sessionID := input.RuntimeSessionID
 
-	header := c.HeaderRead(input, log)
+	header := c.HeaderDelete(input, log)
 	if header == nil {
 		return nil, nil, nil
 	}
-	header.HeaderIsDeleted = input.Orders.IsMarkedForDeletion
+	header.IsMarkedForDeletion = input.Header.IsMarkedForDeletion
 	res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": header, "function": "OrdersHeader", "runtime_session_id": sessionID})
 	if err != nil {
 		err = xerrors.Errorf("rmq error: %w", err)
@@ -114,13 +114,13 @@ func (c *DPFMAPICaller) headerDelete(
 	}
 
 	// headerの削除が取り消された時は子に影響を与えない
-	if !*header.HeaderIsDeleted {
+	if !*header.IsMarkedForDeletion {
 		return header, nil, nil
 	}
 
-	items := c.ItemsRead(input, log)
+	items := c.ItemsDelete(input, log)
 	for i := range *items {
-		(*items)[i].ItemIsDeleted = input.Orders.IsMarkedForDeletion
+		(*items)[i].IsMarkedForDeletion = input.Header.IsMarkedForDeletion
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*items)[i], "function": "OrdersItem", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
@@ -130,15 +130,15 @@ func (c *DPFMAPICaller) headerDelete(
 		res.Success()
 		if !checkResult(res) {
 			output.SQLUpdateResult = getBoolPtr(false)
-			output.SQLUpdateError = "Order Item Data cannot delete"
+			output.SQLUpdateError = "Item Data cannot delete"
 			return nil, nil, nil
 		}
 	}
 
-	schedules := c.ScheduleLineRead(input, log)
-	for i := range *schedules {
-		(*schedules)[i].IsMarkedForDeletion = input.Orders.IsMarkedForDeletion
-		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*schedules)[i], "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
+	itemScheduleLines := c.ItemScheduleLineDelete(input, log)
+	for i := range *itemScheduleLines {
+		(*itemScheduleLines)[i].IsMarkedForDeletion = input.Header.IsMarkedForDeletion
+		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": (*itemScheduleLines)[i], "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
 			log.Error("%+v", err)
@@ -147,23 +147,23 @@ func (c *DPFMAPICaller) headerDelete(
 		res.Success()
 		if !checkResult(res) {
 			output.SQLUpdateResult = getBoolPtr(false)
-			output.SQLUpdateError = "Order Item Schedule Line Data cannot delete"
+			output.SQLUpdateError = "Item Schedule Line Data cannot delete"
 			return nil, nil, nil
 		}
 	}
 
-	return header, items, schedules
+	return header, items, itemScheduleLines
 }
 
 func (c *DPFMAPICaller) itemDelete(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) (*[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ScheduleLine) {
+) (*[]dpfm_api_output_formatter.Item, *[]dpfm_api_output_formatter.ItemScheduleLine) {
 	sessionID := input.RuntimeSessionID
-	schedules := c.ScheduleLineRead(input, log)
-	item := input.Orders.Item[0]
-	for _, v := range *schedules {
+	itemScheduleLines := c.ItemScheduleLineDelete(input, log)
+	item := input.Header.Item[0]
+	for _, v := range *itemScheduleLines {
 		v.IsMarkedForDeletion = item.IsMarkedForDeletion
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": v, "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
 		if err != nil {
@@ -174,18 +174,18 @@ func (c *DPFMAPICaller) itemDelete(
 		res.Success()
 		if !checkResult(res) {
 			output.SQLUpdateResult = getBoolPtr(false)
-			output.SQLUpdateError = "Order Item Schedule Line Data cannot delete"
+			output.SQLUpdateError = "Item Schedule Line Data cannot delete"
 			return nil, nil
 		}
 	}
 
-	items := make([]dpfm_api_output_formatter.Item, 0)
+	item := make([]dpfm_api_output_formatter.Item, 0)
 	for _, v := range input.Orders.Item {
 		data := dpfm_api_output_formatter.Item{
-			OrderID:            input.Orders.OrderID,
-			OrderItem:          v.OrderItem,
-			ItemDeliveryStatus: nil,
-			ItemIsDeleted:      v.IsMarkedForDeletion,
+			OrderID:            	input.Header.OrderID,
+			OrderItem:          	v.OrderItem,
+			ItemDeliveryStatus: 	nil,
+			IsMarkedForDeletion:    v.IsMarkedForDeletion,
 		}
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": data, "function": "OrdersItem", "runtime_session_id": sessionID})
 		if err != nil {
@@ -202,9 +202,9 @@ func (c *DPFMAPICaller) itemDelete(
 	}
 
 	// itemがキャンセル取り消しされた場合、headerのキャンセルも取り消す
-	if !*input.Orders.Item[0].IsMarkedForDeletion {
-		header := c.HeaderRead(input, log)
-		header.HeaderIsDeleted = input.Orders.Item[0].IsMarkedForDeletion
+	if !*input.Header.Item[0].IsMarkedForDeletion {
+		header := c.HeaderDelete(input, log)
+		header.HeaderIsDeleted = input.Header.Item[0].IsMarkedForDeletion
 		res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": header, "function": "OrdersHeader", "runtime_session_id": sessionID})
 		if err != nil {
 			err = xerrors.Errorf("rmq error: %w", err)
@@ -219,23 +219,23 @@ func (c *DPFMAPICaller) itemDelete(
 		}
 	}
 
-	return &items, schedules
+	return &item, itemScheduleLines
 }
 
-func (c *DPFMAPICaller) scheduleDelete(
+func (c *DPFMAPICaller) itemScheduleDelete(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-) *[]dpfm_api_output_formatter.ScheduleLine {
+) *[]dpfm_api_output_formatter.ItemScheduleLine {
 	sessionID := input.RuntimeSessionID
-	schedules := make([]dpfm_api_output_formatter.ScheduleLine, 0)
+	itemScheduleLines := make([]dpfm_api_output_formatter.ItemScheduleLine, 0)
 	for _, item := range input.Orders.Item {
-		for _, schedule := range item.ItemSchedulingLine {
+		for _, itemScheduleLine := range item.ItemSchedulingLine {
 			data := dpfm_api_output_formatter.ScheduleLine{
 				OrderID:             input.Orders.OrderID,
 				OrderItem:           item.OrderItem,
-				ScheduleLine:        schedule.ScheduleLine,
-				IsMarkedForDeletion: schedule.IsMarkedForDeletion,
+				ScheduleLine:        itemScheduleLine.ScheduleLine,
+				IsMarkedForDeletion: itemScheduleLine.IsMarkedForDeletion,
 			}
 			res, err := c.rmq.SessionKeepRequest(nil, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": data, "function": "OrdersItemScheduleLine", "runtime_session_id": sessionID})
 			if err != nil {
@@ -246,13 +246,13 @@ func (c *DPFMAPICaller) scheduleDelete(
 			res.Success()
 			if !checkResult(res) {
 				output.SQLUpdateResult = getBoolPtr(false)
-				output.SQLUpdateError = "Order Item Schedule Line Data cannot delete"
+				output.SQLUpdateError = "Item Schedule Line Data cannot delete"
 				return nil
 			}
-			schedules = append(schedules, data)
+			schedules = append(itemScheduleLines, data)
 		}
 	}
-	return &schedules
+	return &itemScheduleLines
 }
 
 func checkResult(msg rabbitmq.RabbitmqMessage) bool {
