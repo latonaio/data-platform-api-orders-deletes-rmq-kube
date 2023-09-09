@@ -72,7 +72,7 @@ func (c *DPFMAPICaller) deleteSqlProcess(
 			}
 			itemData = append(itemData, *i...)
 			itemScheduleLineData = append(itemScheduleLineData, *s...)
-		case "Schedule":
+		case "ItemScheduleLine":
 			s := c.itemScheduleLineDelete(input, output, log)
 			if s == nil {
 				continue
@@ -222,7 +222,7 @@ func (c *DPFMAPICaller) itemDelete(
 	return &item, itemScheduleLines
 }
 
-func (c *DPFMAPICaller) itemScheduleDelete(
+func (c *DPFMAPICaller) itemScheduleLineDelete(
 	input *dpfm_api_input_reader.SDC,
 	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,

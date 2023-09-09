@@ -32,12 +32,14 @@ type Message struct {
 
 type Header struct {
 	OrderID              int     `json:"OrderID"`
-	IsMarkedForDeletion *bool 	 `json:"IsMarkedForDeletion"`
+	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
+	IsMarkedForDeletion  *bool 	 `json:"IsMarkedForDeletion"`
 }
 
 type Item struct {
 	OrderID             int     `json:"OrderID"`
 	OrderItem           int     `json:"OrderItem"`
+	ItemDeliveryStatus	*string `json:"ItemDeliveryStatus"`
 	IsMarkedForDeletion *bool 	`json:"IsMarkedForDeletion"`
 }
 

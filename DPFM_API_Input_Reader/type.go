@@ -71,6 +71,7 @@ type SDC struct {
 
 type Header struct {
 	OrderID              int     `json:"OrderID"`
+	HeaderDeliveryStatus *string `json:"HeaderDeliveryStatus"`
 	IsMarkedForDeletion  *bool   `json:"IsMarkedForDeletion"`
 	Item                 []Item  `json:"Item"`
 }
@@ -78,6 +79,7 @@ type Header struct {
 type Item struct {
 	OrderID				int					 `json:"OrderID"`
 	OrderItem           int                  `json:"OrderItem"`
+	ItemDeliveryStatus	*string 			 `json:"ItemDeliveryStatus"`
 	IsMarkedForDeletion *bool                `json:"IsMarkedForDeletion"`
 	ItemScheduleLine  	[]ItemScheduleLine	 `json:"ItemScheduleLine"`
 }

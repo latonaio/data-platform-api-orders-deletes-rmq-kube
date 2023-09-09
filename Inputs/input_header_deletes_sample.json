@@ -16,6 +16,5 @@
 	"api_schema": "DPFMOrdersDeletes",
 	"accepter": [
 		"Header"
-	],
-	"deleted": false
+	]
 }

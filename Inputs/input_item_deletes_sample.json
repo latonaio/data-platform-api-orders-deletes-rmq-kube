@@ -20,6 +20,5 @@
 	"api_schema": "DPFMOrdersDeletes",
 	"accepter": [
 		"Item"
-	],
-	"deleted": false
+	]
 }
